@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
 ## Using RMarkdown
 ```{r}
 data<-read.table("c62.surinfo.dat")
-data<-rename(data,??=V1,state=V5,id=V3,group=V2)
+data<-rename(data,"?"=V1,state=V5,id=V3,group=V2)
 surveydata<-read.table("http://pmatheson.people.amherst.edu/c62.survey.dat")
 surveydata<-rename(surveydata,id=V1,Q1=V2,Q2=V3,"P(3a)"=V4,"P(3b)"=V5,"P(3c)"=V6,Q4=V7)
 ```
