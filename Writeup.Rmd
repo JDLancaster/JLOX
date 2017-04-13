@@ -1,80 +1,129 @@
 ---
-title: "JLOX 6.2"
-author: "JL & OX"
-date: "4/4/17"
-output: 
-  html_document:
+title: "Lost Mail Appendix"
+author: 'JL, ZB, OX, WM, and ED'
+date: '4/13/17'
+output:
+  pdf_document:
     fig_height: 3
     fig_width: 5
-  pdf_document:
+  html_document:
     fig_height: 3
     fig_width: 5
   word_document:
     fig_height: 3
     fig_width: 5
 ---
-
 ```{r, setup, include=FALSE}
-require(mosaic)   # Load additional packages here
-require(dplyr)
-
-# Some customization.  You can alter or delete as desired (if you know what you are doing).
+require(mosaic)   # Load additional packages here 
+library(xtable)
+require(xtable)
 trellis.par.set(theme=theme.mosaic()) # change default color scheme for lattice
 knitr::opts_chunk$set(
   tidy=FALSE,     # display code as typed
   size="small")   # slightly smaller font for code
 ```
-
-## Using RMarkdown
+Data Import + Cleaning
 ```{r}
-data<-read.table("c62.surinfo.dat")
-data<-rename(data,"?"=V1,state=V5,id=V3,group=V2)
-surveydata<-read.table("http://pmatheson.people.amherst.edu/c62.survey.dat")
-surveydata<-rename(surveydata,id=V1,Q1=V2,Q2=V3,"P(3a)"=V4,"P(3b)"=V5,"P(3c)"=V6,Q4=V7)
+datainfo <- read.table("http://pmatheson.people.amherst.edu/c62.surinfo.dat")
+datasurvey <- read.table("http://pmatheson.people.amherst.edu/c62.survey.dat")
+colnames(datasurvey) <- c("ID", "Q1", "Q2", "Q3a", "Q3b", "Q3c", "Q4") #change column names
+colnames(datainfo) <- c("i", "Group", "ID", "NumberMag", "State")
+# merge datasets by ID number
+alldata <- merge(x = datasurvey, y = datainfo, by = "ID", all.x = TRUE)
+# omit NA's
+alldata <- na.omit(alldata)
 ```
-
-### Text
-
-Text can be decorated with **bold** or *italics*.  It is also possible to 
-
-* create [links](http://rmarkdown.rstudio.com/) 
-* include mathematics like $e=mc^2$ or 
-$$y = \beta_0 + \beta_1 x_1 + \beta_2 x_2$$
-
-
-Be sure to put a space after the * when you are creating bullets and a space after # when 
-creating section headers, but **not** between $ and the mathematical formulas.
-
-### Graphics
-
-If the code of an R chunk produces a plot, this plot can be displayed in the resulting file.
+Dataset #1: Only considering those who responded to Question 3a
 ```{r}
-xyplot(births ~ date, data=Births78)
-```
+# total magazines in dataset
+totalmag <- as.numeric(sum(alldata$NumberMag))
 
-### R output
-Other forms of R output are also displayed as they are produced.
+# filter for Q3a responses only 
+minidata <- filter(alldata, Q3a != ".")
+percentdel <- as.vector(minidata$Q3a)
+percentdel <- as.numeric(percentdel)/100
+numbermag <- as.vector(minidata$NumberMag)
+numbermag <- as.numeric(numbermag)
+groups <- as.vector(minidata$Group)
+
+numberdel <- percentdel * numbermag
+totaldel <- sum(numberdel)
+percentdelivered <- totaldel/totalmag
+# % delivered correctly = 5.41319
+#percentdelivered*100 
+```
+Finding percent of mail delivered for each group for Dataset #1
+```{r, results = 'asis'}
+bygroups <- as.data.frame(cbind(groups,percentdel, numbermag))
+bygroupsdel <- function(){
+  for (i in 1:23){
+    if (bygroups$groups[i] == 1){ #group 1
+      group1 <- 0
+      group1temp <- bygroups$percentdel[i] * bygroups$numbermag[i]
+      group1 <- group1 + group1temp
+    }
+    if (bygroups$groups[i] == 2){ #group 2
+      group2 <- 0
+      group2temp <- bygroups$percentdel[i] * bygroups$numbermag[i]
+      group2 <- group2 + group2temp
+    } 
+    #no group 3 because there were no "a" responses to question 3 for group 3
+    if (bygroups$groups[i] == 4){ #group 4
+      group4 <- 0
+      group4temp <- bygroups$percentdel[i] * bygroups$numbermag[i]
+      group4 <- group4 + group4temp
+    }
+    if (bygroups$groups[i] == 5){ #group 5
+      group5 <- 0
+      group5temp <- bygroups$percentdel[i] * bygroups$numbermag[i]
+      group5 <- group5 + group5temp
+    }
+  }
+  all <- c(group1, group2, 0, group4, group5)
+  return (all)
+}
+totalminimag <- sum(bygroups$numbermag)
+PercentDelivered <- bygroupsdel()/totalminimag
+Group <- c(1:5)
+groupsdel <- as.data.frame(cbind(Group, PercentDelivered *100))
+colnames(groupsdel) <- c("Group", "PercentDelivered")
+#xtable(groupsdel,caption="Worst-Case Scenario")
+```
+Dataset #2: Considering those who answered "No" to Question 1 as fully delivering all mail correctly plus those who answered Question 3a
 ```{r}
-favstats(~ births, data=Births78)
+q1no <- filter(alldata, Q1 == 0)
+q1no$Q3a[q1no$Q3a == "."] = 100
+biggerdata <- rbind(q1no, minidata)
+percentdel <- as.vector(biggerdata$Q3a)
+percentdel <- as.numeric(percentdel)/100
+numbermag <- as.vector(biggerdata$NumberMag)
+numbermag <- as.numeric(numbermag)
+new <- percentdel * numbermag
+new <- sum(new)
+groups <- as.vector(biggerdata$Group)
+# % delivered correctly = 97.9448
+#new/sum(biggerdata$NumberMag) * 100
 ```
 
-### Destination formats
-
-This file can be knit to HTML, PDF, or Word.  In RStudio, just select the desired output file type
-and click on `Knit HTML`, `Knit PDF`, or `Knit Word`.  Use the dropdown menu next to that to 
-change the desired file type.
-
-### Documenting file creation 
-
-It's useful to record some information about how your file was created.
-
-  * File creation date: `r Sys.Date()`
-  * `r R.version.string`
-  * R version (short form): `r getRversion()`
-  * `mosaic` package version: `r packageVersion("mosaic")`
-  * Additional session information
-  
-```{r echo=FALSE}
-sessionInfo()  # could use devtools::session_info() if you prefer that
+```{r, results = 'asis'}
+bygroups2 <- as.data.frame(cbind(groups,percentdel, numbermag))
+new <- bygroups2$percentdel * bygroups2$numbermag
+bygroups2 <- cbind(bygroups2, new)
+#breaking up % delivered correctly by group
+group1 <- filter(bygroups2, groups == 1)
+group2 <- filter(bygroups2, groups == 2)
+group3 <- filter(bygroups2, groups == 3)
+group4 <- filter(bygroups2, groups == 4)
+group5 <- filter(bygroups2, groups == 5)
+group1tot <- sum(group1$new)/sum(group1$numbermag)
+group2tot <- sum(group2$new)/sum(group2$numbermag)
+group3tot <- sum(group3$new)/sum(group3$numbermag)
+group4tot <- sum(group4$new)/sum(group4$numbermag)
+group5tot <- sum(group5$new)/sum(group5$numbermag)
+all <- c(group1tot, group2tot, group3tot, group4tot, group5tot)
+Group <- c(1:5)
+groupsdel2 <- as.data.frame(cbind(Group/100, all))
+colnames(groupsdel2) <- c("Group", "PercentDelivered")
+groupsdel2<-groupsdel2*100
+#xtable(groupsdel2,caption="Best-Case Scenario")
 ```
-  
